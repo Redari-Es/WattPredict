@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useDashboardStore } from '@/lib/store';
-import type { ScenarioRecord, ScenarioAppliance } from '@/lib/domain';
+import type { ScenarioRecord, ScenarioAppliance, SimulationRun } from '@/lib/domain';
 import { Sidebar } from './Sidebar';
 import { Header, type HeaderUser } from './Header';
 import { OverviewView } from './views/OverviewView';
@@ -14,21 +14,25 @@ export function DashboardApp({
   user,
   initialScenarios,
   initialAppliances,
+  initialSimulationRuns,
 }: {
   user: HeaderUser;
   /** null = 开发模式（使用演示数据）；数组 = Supabase 真实数据 */
   initialScenarios: ScenarioRecord[] | null;
   initialAppliances: ScenarioAppliance[] | null;
+  initialSimulationRuns: SimulationRun[] | null;
 }) {
   const view = useDashboardStore((s) => s.view);
   const initScenarios = useDashboardStore((s) => s.initScenarios);
   const initAppliances = useDashboardStore((s) => s.initAppliances);
+  const initSimulationRuns = useDashboardStore((s) => s.initSimulationRuns);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     initScenarios(initialScenarios);
     initAppliances(initialAppliances);
-  }, [initialScenarios, initialAppliances, initScenarios, initAppliances]);
+    initSimulationRuns(initialSimulationRuns);
+  }, [initialScenarios, initialAppliances, initialSimulationRuns, initScenarios, initAppliances, initSimulationRuns]);
 
   return (
     <div className="relative flex h-screen overflow-hidden bg-background">

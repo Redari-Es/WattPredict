@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { DashboardApp } from '@/components/dashboard/DashboardApp';
 import type { HeaderUser } from '@/components/dashboard/Header';
-import type { ScenarioRecord, ScenarioAppliance } from '@/lib/domain';
+import type { ScenarioRecord, ScenarioAppliance, SimulationRun } from '@/lib/domain';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -10,6 +10,7 @@ export default async function DashboardPage() {
   let user: HeaderUser;
   let scenarios: ScenarioRecord[] | null = null;
   let appliances: ScenarioAppliance[] | null = null;
+  let simulationRuns: SimulationRun[] | null = null;
 
   if (supabase) {
     const {
@@ -31,10 +32,24 @@ export default async function DashboardPage() {
 
     const { data: applianceRows } = await supabase.from('appliances').select('*');
     appliances = (applianceRows as ScenarioAppliance[] | null) ?? [];
+
+    const { data: runRows } = await supabase
+      .from('simulation_runs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    simulationRuns = (runRows as SimulationRun[] | null) ?? [];
   } else {
     // 开发模式：未配置 Supabase，使用本地演示数据
     user = { email: 'dev@wattpredict.local', name: '开发模式', avatarUrl: null };
   }
 
-  return <DashboardApp user={user} initialScenarios={scenarios} initialAppliances={appliances} />;
+  return (
+    <DashboardApp
+      user={user}
+      initialScenarios={scenarios}
+      initialAppliances={appliances}
+      initialSimulationRuns={simulationRuns}
+    />
+  );
 }

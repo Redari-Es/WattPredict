@@ -1,4 +1,4 @@
-import type { MeterType } from './types';
+import type { MeterType, SimulationResult } from './types';
 
 /** 用电场景记录（仪表盘内使用，后续对接 Supabase scenarios 表） */
 export interface ScenarioRecord {
@@ -62,6 +62,17 @@ export interface ScenarioAppliance {
   hours_per_day: number;
   /** 自定义功率（null/undefined = 使用预设默认功率） */
   power_w?: number | null;
+}
+
+/** 推演历史记录（对应 simulation_runs 表） */
+export interface SimulationRun {
+  id: string;
+  scenario_id: string;
+  monthly_kwh: number;
+  flat_result: SimulationResult;
+  tou_result?: SimulationResult | null;
+  saving?: number | null;
+  created_at: string;
 }
 
 export const METER_TYPE_LABELS: Record<MeterType, string> = {

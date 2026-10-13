@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { Play, Loader2, AlertCircle, Lightbulb, TrendingDown, TrendingUp } from 'lucide-react';
-import { simulateScenario, type SimulateActionResult } from '@/app/actions';
+import { simulateScenario, saveSimulationRunAction, type SimulateActionResult } from '@/app/actions';
+import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { useDashboardStore } from '@/lib/store';
 import { METER_TYPE_LABELS, type ScenarioRecord } from '@/lib/domain';
 import { formatEnergy } from '@/lib/units';
@@ -112,7 +113,7 @@ function PlanCard({
 }
 
 export function SimulateView() {
-  const { scenarios, simScenarioId, simKwh } = useDashboardStore();
+  const { scenarios, simScenarioId, simKwh, addSimulationRun } = useDashboardStore();
   const [scenarioId, setScenarioId] = useState(simScenarioId ?? scenarios[0]?.id ?? '');
   const [kwh, setKwh] = useState(String(simKwh ?? scenarios[0]?.monthly_kwh ?? 420));
   const [pending, startTransition] = useTransition();
@@ -131,6 +132,18 @@ export function SimulateView() {
       ]);
       setFlat(flatRes);
       setTou(touRes);
+
+      // 云端模式下保存推演历史（不阻塞 UI）
+      if (flatRes.ok && isSupabaseConfigured()) {
+        void saveSimulationRunAction({
+          scenario_id: scenario.id,
+          monthly_kwh: Number(kwh),
+          flat_result: flatRes.result,
+          tou_result: touRes.ok ? touRes.result : null,
+        }).then((saved) => {
+          if (saved.ok && saved.run) addSimulationRun(saved.run);
+        });
+      }
     });
   }
 

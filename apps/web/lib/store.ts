@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import type { ScenarioRecord, ScenarioAppliance } from './domain';
+import type { ScenarioRecord, ScenarioAppliance, SimulationRun } from './domain';
 import { seedScenarios } from './mock-data';
 
 export type DashboardView = 'overview' | 'scenarios' | 'simulate' | 'appliances';
@@ -26,6 +26,11 @@ interface DashboardState {
     presetId: string,
     patch: { count?: number; hoursPerDay?: number; powerW?: number | null },
   ) => void;
+
+  /** 推演历史（按时间倒序） */
+  simulationRuns: SimulationRun[];
+  initSimulationRuns: (list: SimulationRun[] | null) => void;
+  addSimulationRun: (run: SimulationRun) => void;
 
   /** 推演视图预选的场景与电量 */
   simScenarioId: string | null;
@@ -67,6 +72,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       const next = merged.count > 0 ? [...rest, merged] : rest;
       return { appliances: { ...state.appliances, [scenarioId]: next } };
     }),
+
+  simulationRuns: [],
+  initSimulationRuns: (list) => set({ simulationRuns: list ?? [] }),
+  addSimulationRun: (run) =>
+    set((state) => ({ simulationRuns: [run, ...state.simulationRuns] })),
 
   simScenarioId: null,
   simKwh: null,

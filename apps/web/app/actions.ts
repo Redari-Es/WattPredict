@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { ScenarioSchema, type SimulationResult } from '@/lib/types';
-import type { ScenarioRecord } from '@/lib/domain';
+import type { ScenarioRecord, SimulationRun } from '@/lib/domain';
 import { simulate } from '@/lib/engine';
 import { createClient } from '@/lib/supabase/server';
 
@@ -90,6 +90,30 @@ export async function deleteScenarioAction(id: string): Promise<{ ok: boolean; e
   const { error } = await supabase.from('scenarios').delete().eq('id', id);
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+/** 保存推演历史（双方案结果） */
+export async function saveSimulationRunAction(input: {
+  scenario_id: string;
+  monthly_kwh: number;
+  flat_result: SimulationResult;
+  tou_result?: SimulationResult | null;
+}): Promise<{ ok: boolean; run?: SimulationRun; error?: string }> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: 'Supabase 未配置' };
+
+  const saving = input.tou_result
+    ? Math.round((input.flat_result.total_cost - input.tou_result.total_cost) * 100) / 100
+    : null;
+
+  const { data, error } = await supabase
+    .from('simulation_runs')
+    .insert({ ...input, saving })
+    .select()
+    .single();
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, run: data as SimulationRun };
 }
 
 /** 保存某场景的电器组合（整体替换：删除旧的，写入 count > 0 的） */
