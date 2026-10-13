@@ -1,0 +1,18 @@
+{
+  "_note": "广东居民电价（示例值，MVP 待核价）：阶梯 + 可选峰谷分时",
+  "province": "GD",
+  "meter_type": "residential",
+  "tiers": [
+    { "name": "第一档 (0-260 kWh)", "limit": 260, "price": 0.5889 },
+    { "name": "第二档 (261-600 kWh)", "limit": 600, "price": 0.6389 },
+    { "name": "第三档 (600+ kWh)", "limit": -1, "price": 0.8889 }
+  ],
+  "tou": {
+    "periods": [
+      { "name": "峰", "hours": [[14, 17], [19, 22]], "price": 0.9889 },
+      { "name": "平", "hours": [[8, 14], [17, 19], [22, 24]], "price": 0.6389 },
+      { "name": "谷", "hours": [[0, 8]], "price": 0.2889 }
+    ],
+    "default_profile": { "峰": 0.25, "平": 0.55, "谷": 0.2 }
+  }
+}

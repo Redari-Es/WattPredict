@@ -1,0 +1,35 @@
+# ---------- 密钥与环境（绝不提交） ----------
+.env
+.env.local
+.env.*.local
+
+# ---------- 依赖 ----------
+node_modules/
+
+# ---------- Next.js ----------
+.next/
+out/
+
+# ---------- 构建产物 ----------
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# ---------- Go ----------
+/wattengine
+*.test
+coverage.out
+
+# ---------- 日志与临时文件 ----------
+*.log
+.DS_Store
+Thumbs.db
+
+# ---------- IDE ----------
+.idea/
+.vscode/
+*.swp
+
+# ---------- Claude Code 本地配置 ----------
+.claude/

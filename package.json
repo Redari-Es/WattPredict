@@ -1,0 +1,20 @@
+{
+  "name": "wattpredict",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "bash scripts/dev.sh",
+    "dev:web": "bun --cwd apps/web run dev",
+    "dev:engine": "go run ./packages/wattengine/cmd/server",
+    "test:engine": "go test ./packages/wattengine/...",
+    "typecheck": "bun --cwd apps/web run typecheck",
+    "quickstart": "bun run quickstart.ts"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

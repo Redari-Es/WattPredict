@@ -1,0 +1,14 @@
+{
+  "_note": "广东一般工商业电价（示例值，MVP 待核价）：单一制 + 可选峰谷分时",
+  "province": "GD",
+  "meter_type": "commercial",
+  "flat_price": 0.7838,
+  "tou": {
+    "periods": [
+      { "name": "峰", "hours": [[10, 12], [14, 19]], "price": 1.0139 },
+      { "name": "平", "hours": [[8, 10], [12, 14], [19, 24]], "price": 0.7838 },
+      { "name": "谷", "hours": [[0, 8]], "price": 0.4011 }
+    ],
+    "default_profile": { "峰": 0.35, "平": 0.5, "谷": 0.15 }
+  }
+}

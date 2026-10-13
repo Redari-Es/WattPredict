@@ -1,0 +1,15 @@
+{
+  "_note": "广东大工业电价（示例值，MVP 待核价）：两部制（基本电费 + 电度电费）+ 可选峰谷分时",
+  "province": "GD",
+  "meter_type": "industrial",
+  "flat_price": 0.6389,
+  "basic_fee": { "per_kva": 23.0, "per_kw_demand": 32.0 },
+  "tou": {
+    "periods": [
+      { "name": "峰", "hours": [[10, 12], [14, 19]], "price": 0.9506 },
+      { "name": "平", "hours": [[8, 10], [12, 14], [19, 24]], "price": 0.6389 },
+      { "name": "谷", "hours": [[0, 8]], "price": 0.3011 }
+    ],
+    "default_profile": { "峰": 0.4, "平": 0.45, "谷": 0.15 }
+  }
+}
