@@ -59,12 +59,14 @@ export const seedScenarios: ScenarioRecord[] = [
 
 export const appliancePresets: AppliancePreset[] = [
   // 制冷取暖
+  // 注意：空调/冰箱为间歇运行设备，功率取「占空比折算均耗」而非额定功率
+  // （变频空调达温后低频运转，冰箱压缩机约 40% 时间运行，直接用额定功率会高估 2 倍左右）
   {
-    id: 'ac', name: '空调 (1.5匹)', icon: 'AirVent', category: 'cooling', power_w: 980, hours_per_day: 8,
+    id: 'ac', name: '空调 (1.5匹)', icon: 'AirVent', category: 'cooling', power_w: 550, hours_per_day: 8,
     power_options: [
-      { label: '一级能效', power_w: 810 },
-      { label: '三级能效', power_w: 980 },
-      { label: '五级能效', power_w: 1200 },
+      { label: '一级能效', power_w: 400 },   // 额定 810W，均耗约 50%
+      { label: '三级能效', power_w: 550 },   // 额定 980W，均耗约 56%
+      { label: '五级能效', power_w: 700 },   // 额定 1200W，均耗约 58%
     ],
   },
   {
@@ -77,11 +79,12 @@ export const appliancePresets: AppliancePreset[] = [
   },
   { id: 'blanket', name: '电热毯', icon: 'Heater', category: 'cooling', power_w: 100, hours_per_day: 6 },
   {
-    id: 'fridge', name: '冰箱', icon: 'Refrigerator', category: 'cooling', power_w: 110, hours_per_day: 24,
+    // 冰箱按能效标识的「综合耗电量(度/24h)」折算均耗功率
+    id: 'fridge', name: '冰箱', icon: 'Refrigerator', category: 'cooling', power_w: 35, hours_per_day: 24,
     power_options: [
-      { label: '一级能效', power_w: 90 },
-      { label: '二级能效', power_w: 110 },
-      { label: '对开门大容量', power_w: 150 },
+      { label: '一级能效 (0.6度/天)', power_w: 25 },
+      { label: '二级能效 (0.85度/天)', power_w: 35 },
+      { label: '对开门 (1.3度/天)', power_w: 54 },
     ],
   },
   // 厨房烹饪

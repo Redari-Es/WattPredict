@@ -305,7 +305,7 @@ export function AppliancesView() {
                 </div>
                 <CardTitle className="pt-2 text-sm">{p.name}</CardTitle>
                 <CardDescription className="text-xs">
-                  {p.name.includes('充电') ? '充电功率' : '额定功率'}可调 · 时长滑块
+                  功率可选档/自定义 · 时长滑块
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
