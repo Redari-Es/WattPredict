@@ -34,7 +34,7 @@ export function OverviewView() {
   return (
     <div className="space-y-6">
       {/* KPI 卡片 */}
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map(({ label, value, sub, icon: Icon, accent }) => (
           <Card key={label} className={accent ? 'glow-amber border-primary/30' : ''}>
             <CardContent className="flex items-center justify-between p-5">

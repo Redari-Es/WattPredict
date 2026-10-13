@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Calculator } from 'lucide-react';
+import { Plus, Trash2, Calculator, Loader2 } from 'lucide-react';
 import { useDashboardStore } from '@/lib/store';
 import { METER_TYPE_LABELS, GD_CITIES, type ScenarioRecord } from '@/lib/domain';
 import { formatEnergy } from '@/lib/units';
+import { createScenarioAction, deleteScenarioAction } from '@/app/actions';
+import { isSupabaseConfigured } from '@/lib/supabase/config';
 import type { MeterType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,12 +33,13 @@ function NewScenarioDialog() {
   const addScenario = useDashboardStore((s) => s.addScenario);
   const [open, setOpen] = useState(false);
   const [meterType, setMeterType] = useState<MeterType>('residential');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const scenario: ScenarioRecord = {
-      id: `sc-${crypto.randomUUID().slice(0, 8)}`,
+    const input: Omit<ScenarioRecord, 'id'> = {
       name: String(fd.get('name')),
       province: 'GD',
       city: String(fd.get('city')),
@@ -50,7 +53,24 @@ function NewScenarioDialog() {
         demand_kw: Number(fd.get('demand_kw')),
       }),
     };
-    addScenario(scenario);
+
+    setSaving(true);
+    setError(null);
+
+    if (isSupabaseConfigured()) {
+      // 云端持久化（RLS 自动归属当前用户）
+      const res = await createScenarioAction(input);
+      setSaving(false);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      addScenario(res.scenario);
+    } else {
+      // 开发模式：仅本地
+      addScenario({ ...input, id: `sc-${crypto.randomUUID().slice(0, 8)}` });
+      setSaving(false);
+    }
     setOpen(false);
   }
 
@@ -150,7 +170,11 @@ function NewScenarioDialog() {
             已开通分时电价 (TOU)
           </label>
 
-          <Button type="submit" className="w-full">创建场景</Button>
+          <Button type="submit" className="w-full" disabled={saving}>
+            {saving && <Loader2 className="animate-spin" />}
+            创建场景
+          </Button>
+          {error && <p className="text-center text-sm text-destructive">{error}</p>}
         </form>
       </DialogContent>
     </Dialog>
@@ -159,10 +183,19 @@ function NewScenarioDialog() {
 
 export function ScenariosView() {
   const { scenarios, removeScenario, startSimulation } = useDashboardStore();
+  const cloud = isSupabaseConfigured();
+
+  async function handleDelete(id: string) {
+    if (cloud) {
+      const res = await deleteScenarioAction(id);
+      if (!res.ok) return; // RLS 拒绝或网络错误时保持现状
+    }
+    removeScenario(id);
+  }
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle>用电场景</CardTitle>
           <CardDescription className="mt-1">
@@ -204,7 +237,7 @@ export function ScenariosView() {
                     <Button
                       variant="ghost" size="icon"
                       className="text-muted-foreground hover:text-destructive"
-                      onClick={() => removeScenario(s.id)}
+                      onClick={() => void handleDelete(s.id)}
                     >
                       <Trash2 />
                     </Button>

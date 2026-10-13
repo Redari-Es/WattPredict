@@ -59,10 +59,31 @@ export const seedScenarios: ScenarioRecord[] = [
 
 export const appliancePresets: AppliancePreset[] = [
   // 制冷取暖
-  { id: 'ac', name: '空调 (1.5匹)', icon: 'AirVent', category: 'cooling', power_w: 1100, hours_per_day: 8 },
-  { id: 'fan', name: '电风扇', icon: 'Fan', category: 'cooling', power_w: 60, hours_per_day: 6 },
+  {
+    id: 'ac', name: '空调 (1.5匹)', icon: 'AirVent', category: 'cooling', power_w: 980, hours_per_day: 8,
+    power_options: [
+      { label: '一级能效', power_w: 810 },
+      { label: '三级能效', power_w: 980 },
+      { label: '五级能效', power_w: 1200 },
+    ],
+  },
+  {
+    id: 'fan', name: '电风扇', icon: 'Fan', category: 'cooling', power_w: 60, hours_per_day: 6,
+    power_options: [
+      { label: '普通', power_w: 60 },
+      { label: '直流变频', power_w: 30 },
+      { label: '空气循环扇', power_w: 45 },
+    ],
+  },
   { id: 'blanket', name: '电热毯', icon: 'Heater', category: 'cooling', power_w: 100, hours_per_day: 6 },
-  { id: 'fridge', name: '冰箱', icon: 'Refrigerator', category: 'cooling', power_w: 120, hours_per_day: 24 },
+  {
+    id: 'fridge', name: '冰箱', icon: 'Refrigerator', category: 'cooling', power_w: 110, hours_per_day: 24,
+    power_options: [
+      { label: '一级能效', power_w: 90 },
+      { label: '二级能效', power_w: 110 },
+      { label: '对开门大容量', power_w: 150 },
+    ],
+  },
   // 厨房烹饪
   { id: 'induction', name: '电磁炉', icon: 'CookingPot', category: 'kitchen', power_w: 2100, hours_per_day: 1.5 },
   { id: 'rice-cooker', name: '电饭煲', icon: 'Soup', category: 'kitchen', power_w: 400, hours_per_day: 1 },
@@ -70,22 +91,71 @@ export const appliancePresets: AppliancePreset[] = [
   { id: 'oven', name: '电烤箱', icon: 'ChefHat', category: 'kitchen', power_w: 1800, hours_per_day: 0.5 },
   { id: 'dishwasher', name: '洗碗机', icon: 'Droplets', category: 'kitchen', power_w: 1200, hours_per_day: 1 },
   // 洗护清洁
-  { id: 'washer', name: '洗衣机', icon: 'WashingMachine', category: 'laundry', power_w: 500, hours_per_day: 1 },
+  {
+    id: 'washer', name: '洗衣机', icon: 'WashingMachine', category: 'laundry', power_w: 500, hours_per_day: 1,
+    power_options: [
+      { label: '波轮', power_w: 400 },
+      { label: '滚筒', power_w: 500 },
+      { label: '洗烘一体', power_w: 1200 },
+    ],
+  },
   { id: 'dryer', name: '烘干机', icon: 'Shirt', category: 'laundry', power_w: 2000, hours_per_day: 1 },
-  { id: 'water-heater', name: '电热水器', icon: 'Flame', category: 'laundry', power_w: 2000, hours_per_day: 2 },
+  {
+    id: 'water-heater', name: '电热水器', icon: 'Flame', category: 'laundry', power_w: 2000, hours_per_day: 2,
+    power_options: [
+      { label: '1500W 小容量', power_w: 1500 },
+      { label: '2000W 常规', power_w: 2000 },
+      { label: '3000W 速热', power_w: 3000 },
+    ],
+  },
   // 数码家电
-  { id: 'pc', name: '台式电脑', icon: 'Monitor', category: 'digital', power_w: 350, hours_per_day: 6 },
-  { id: 'laptop', name: '笔记本电脑', icon: 'Laptop', category: 'digital', power_w: 65, hours_per_day: 8 },
-  { id: 'phone', name: '手机充电', icon: 'Smartphone', category: 'digital', power_w: 15, hours_per_day: 2 },
+  {
+    id: 'pc', name: '台式电脑', icon: 'Monitor', category: 'digital', power_w: 350, hours_per_day: 6,
+    power_options: [
+      { label: '办公机', power_w: 200 },
+      { label: '主流配置', power_w: 350 },
+      { label: '高配游戏', power_w: 600 },
+    ],
+  },
+  {
+    id: 'laptop', name: '笔记本电脑', icon: 'Laptop', category: 'digital', power_w: 65, hours_per_day: 8,
+    power_options: [
+      { label: '轻薄本', power_w: 45 },
+      { label: '全能本', power_w: 65 },
+      { label: '游戏本', power_w: 150 },
+    ],
+  },
+  {
+    id: 'phone', name: '手机充电', icon: 'Smartphone', category: 'digital', power_w: 20, hours_per_day: 2,
+    power_options: [
+      { label: '慢充 10W', power_w: 10 },
+      { label: '快充 20W', power_w: 20 },
+      { label: '超级快充 65W', power_w: 65 },
+    ],
+  },
   { id: 'router', name: '路由器', icon: 'Router', category: 'digital', power_w: 10, hours_per_day: 24 },
-  { id: 'tv', name: '电视', icon: 'Tv', category: 'digital', power_w: 150, hours_per_day: 4 },
+  {
+    id: 'tv', name: '电视', icon: 'Tv', category: 'digital', power_w: 200, hours_per_day: 4,
+    power_options: [
+      { label: '55 英寸', power_w: 120 },
+      { label: '75 英寸', power_w: 200 },
+      { label: '85 英寸', power_w: 300 },
+    ],
+  },
   { id: 'console', name: '游戏机', icon: 'Gamepad2', category: 'digital', power_w: 200, hours_per_day: 2 },
   { id: 'projector', name: '投影仪', icon: 'Projector', category: 'digital', power_w: 250, hours_per_day: 2 },
   // 照明环境
   { id: 'led', name: 'LED 照明', icon: 'Lightbulb', category: 'environment', power_w: 60, hours_per_day: 6 },
   { id: 'purifier', name: '空气净化器', icon: 'Wind', category: 'environment', power_w: 50, hours_per_day: 12 },
   // 出行充电
-  { id: 'ev', name: '电动车充电', icon: 'Car', category: 'mobility', power_w: 3300, hours_per_day: 2 },
+  {
+    id: 'ev', name: '电动车充电', icon: 'Car', category: 'mobility', power_w: 3300, hours_per_day: 2,
+    power_options: [
+      { label: '慢充 2.2kW', power_w: 2200 },
+      { label: '常规 3.3kW', power_w: 3300 },
+      { label: '快充 7kW', power_w: 7000 },
+    ],
+  },
 ];
 
 /** 月耗电量估算 (kWh) */
