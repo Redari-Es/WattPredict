@@ -11,6 +11,16 @@ export type SimulateActionResult =
   | { ok: false; error: string };
 
 export async function simulateScenario(formData: FormData): Promise<SimulateActionResult> {
+  const touRaw = formData.get('tou_profile');
+  let touProfile: Record<string, number> | undefined;
+  if (typeof touRaw === 'string' && touRaw) {
+    try {
+      touProfile = JSON.parse(touRaw) as Record<string, number>;
+    } catch {
+      return { ok: false, error: '分时画像格式错误' };
+    }
+  }
+
   const parsed = ScenarioSchema.safeParse({
     name: formData.get('name'),
     province: formData.get('province'),
@@ -20,6 +30,7 @@ export async function simulateScenario(formData: FormData): Promise<SimulateActi
     monthly_kwh: formData.get('monthly_kwh'),
     transformer_kva: formData.get('transformer_kva') || undefined,
     demand_kw: formData.get('demand_kw') || undefined,
+    tou_profile: touProfile,
   });
 
   if (!parsed.success) {

@@ -81,6 +81,13 @@ export const METER_TYPE_LABELS: Record<MeterType, string> = {
   industrial: '工业',
 };
 
+/** 默认分时用电画像（百分比，与瓦特引擎规则文件的 default_profile 对齐） */
+export const DEFAULT_TOU_PROFILE: Record<MeterType, { 峰: number; 平: number; 谷: number }> = {
+  residential: { 峰: 25, 平: 55, 谷: 20 },
+  commercial: { 峰: 35, 平: 50, 谷: 15 },
+  industrial: { 峰: 40, 平: 45, 谷: 15 },
+};
+
 export const GD_CITIES = [
   '广州', '深圳', '佛山', '东莞', '珠海', '中山', '惠州', '江门', '肇庆', '汕头', '其他',
 ] as const;

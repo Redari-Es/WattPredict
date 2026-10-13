@@ -12,6 +12,8 @@ export const ScenarioSchema = z.object({
   // 工业两部制参数（可选）
   transformer_kva: z.coerce.number().positive().optional(),
   demand_kw: z.coerce.number().positive().optional(),
+  // 分时用电画像（可选，如 {"峰":25,"平":55,"谷":20}，引擎自动归一化）
+  tou_profile: z.record(z.string(), z.number().min(0)).optional(),
 });
 
 export type Scenario = z.infer<typeof ScenarioSchema>;

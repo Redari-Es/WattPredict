@@ -5,13 +5,14 @@ import { Play, Loader2, AlertCircle, Lightbulb, TrendingDown, TrendingUp } from 
 import { simulateScenario, saveSimulationRunAction, type SimulateActionResult } from '@/app/actions';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { useDashboardStore } from '@/lib/store';
-import { METER_TYPE_LABELS, type ScenarioRecord } from '@/lib/domain';
+import { METER_TYPE_LABELS, DEFAULT_TOU_PROFILE, type ScenarioRecord } from '@/lib/domain';
 import { formatEnergy } from '@/lib/units';
 import type { SimulationResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -44,7 +45,12 @@ function segmentsOf(r: SimulationResult): PlanSegment[] {
   }));
 }
 
-function buildFormData(s: ScenarioRecord, kwh: string, hasTou: boolean): FormData {
+function buildFormData(
+  s: ScenarioRecord,
+  kwh: string,
+  hasTou: boolean,
+  touProfile: Record<string, number>,
+): FormData {
   const fd = new FormData();
   fd.set('name', s.name);
   fd.set('province', s.province);
@@ -54,6 +60,7 @@ function buildFormData(s: ScenarioRecord, kwh: string, hasTou: boolean): FormDat
   fd.set('monthly_kwh', kwh);
   if (s.transformer_kva) fd.set('transformer_kva', String(s.transformer_kva));
   if (s.demand_kw) fd.set('demand_kw', String(s.demand_kw));
+  if (hasTou) fd.set('tou_profile', JSON.stringify(touProfile));
   return fd;
 }
 
@@ -121,14 +128,25 @@ export function SimulateView() {
   const [tou, setTou] = useState<SimulateActionResult | null>(null);
 
   const scenario = scenarios.find((s) => s.id === scenarioId);
+  const meterType = scenario?.meter_type ?? 'residential';
+  const [touProfile, setTouProfile] = useState<Record<string, number>>({ ...DEFAULT_TOU_PROFILE[meterType] });
+
+  // 切换场景（电表类型变化）时重置画像为该类型默认值
+  const [prevMeterType, setPrevMeterType] = useState(meterType);
+  if (meterType !== prevMeterType) {
+    setPrevMeterType(meterType);
+    setTouProfile({ ...DEFAULT_TOU_PROFILE[meterType] });
+  }
+
+  const profileSum = Object.values(touProfile).reduce((a, b) => a + b, 0);
 
   function run() {
     if (!scenario) return;
     startTransition(async () => {
-      // 并行推演两种方案：现行（阶梯/单一制）vs 分时（TOU）
+      // 并行推演两种方案：现行（阶梯/单一制）vs 分时（TOU，带自定义画像）
       const [flatRes, touRes] = await Promise.all([
-        simulateScenario(buildFormData(scenario, kwh, false)),
-        simulateScenario(buildFormData(scenario, kwh, true)),
+        simulateScenario(buildFormData(scenario, kwh, false, touProfile)),
+        simulateScenario(buildFormData(scenario, kwh, true, touProfile)),
       ]);
       setFlat(flatRes);
       setTou(touRes);
@@ -182,6 +200,36 @@ export function SimulateView() {
               value={kwh}
               onChange={(e) => setKwh(e.target.value)}
             />
+          </div>
+
+          {/* 分时用电画像（仅影响分时方案） */}
+          <div className="space-y-2.5 rounded-lg border border-border/60 p-3">
+            <div className="flex items-center justify-between">
+              <Label>分时用电画像</Label>
+              <button
+                type="button"
+                onClick={() => setTouProfile({ ...DEFAULT_TOU_PROFILE[meterType] })}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                重置
+              </button>
+            </div>
+            {(['峰', '平', '谷'] as const).map((period) => (
+              <div key={period} className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{period}段</span>
+                  <span className="font-medium text-foreground">{touProfile[period]}%</span>
+                </div>
+                <Slider
+                  value={[touProfile[period]]}
+                  onValueChange={([v]) => setTouProfile((p) => ({ ...p, [period]: v }))}
+                  min={0} max={100} step={1}
+                />
+              </div>
+            ))}
+            <p className={`text-[11px] ${profileSum === 100 ? 'text-muted-foreground' : 'text-primary'}`}>
+              合计 {profileSum}%{profileSum !== 100 && '（引擎将按比例自动归一化）'}
+            </p>
           </div>
 
           {scenario && (

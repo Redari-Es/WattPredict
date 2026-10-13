@@ -42,10 +42,10 @@ func TestCalculateCost_Residential_TOU(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CalculateCost: %v", err)
 	}
-	// 默认画像 峰0.25 平0.55 谷0.2：105×0.9889 + 231×0.6389 + 84×0.2889
-	want := 103.83 + 147.59 + 24.27
-	if resp.TotalCost != want {
-		t.Errorf("total cost = %v, want %v", resp.TotalCost, want)
+	// 默认画像 峰0.25 平0.55 谷0.2，2025 核价（峰1.0011/平0.5889/谷0.2238）
+	want := 105*1.0011 + 231*0.5889 + 84*0.2238
+	if resp.TotalCost != round2(want) {
+		t.Errorf("total cost = %v, want %v", resp.TotalCost, round2(want))
 	}
 	if len(resp.Tou) != 3 {
 		t.Errorf("tou periods = %d, want 3", len(resp.Tou))
@@ -56,13 +56,13 @@ func TestCalculateCost_Residential_TOU(t *testing.T) {
 }
 
 func TestCalculateCost_Commercial(t *testing.T) {
-	// 单一制
+	// 单一制（0.78 元/度）
 	resp, err := CalculateCost(req(MeterCommercial, 2800))
 	if err != nil {
 		t.Fatalf("CalculateCost: %v", err)
 	}
-	if resp.TotalCost != 2194.64 {
-		t.Errorf("flat total = %v, want 2194.64", resp.TotalCost)
+	if resp.TotalCost != 2184.00 {
+		t.Errorf("flat total = %v, want 2184.00", resp.TotalCost)
 	}
 
 	// 分时
@@ -80,14 +80,14 @@ func TestCalculateCost_Commercial(t *testing.T) {
 func TestCalculateCost_Industrial_TwoPart(t *testing.T) {
 	r := req(MeterIndustrial, 46000)
 	r.HasTOU = true
-	r.TransformerKva = 250 // 250×23 = 5750
-	r.DemandKw = 180       // 180×32 = 5760 → 取低 5750
+	r.TransformerKva = 250 // 250×22.6 = 5650
+	r.DemandKw = 180       // 180×36.1 = 6498 → 取低 5650
 	resp, err := CalculateCost(r)
 	if err != nil {
 		t.Fatalf("CalculateCost: %v", err)
 	}
-	if resp.BasicFee != 5750 {
-		t.Errorf("basic fee = %v, want 5750 (min of kva/demand)", resp.BasicFee)
+	if resp.BasicFee != 5650 {
+		t.Errorf("basic fee = %v, want 5650 (min of kva/demand)", resp.BasicFee)
 	}
 	if resp.TotalCost != round2(resp.EnergyCost+resp.BasicFee) {
 		t.Errorf("total %v != energy %v + basic %v", resp.TotalCost, resp.EnergyCost, resp.BasicFee)

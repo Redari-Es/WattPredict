@@ -5,7 +5,7 @@ import {
   AirVent, Refrigerator, Flame, WashingMachine, CookingPot, Monitor, Tv, Car,
   Smartphone, Laptop, Router, Microwave, Fan, Lightbulb, Wind, Gamepad2,
   Projector, Shirt, Soup, ChefHat, Droplets, Heater, Plug,
-  Minus, Plus, ArrowLeftRight, Loader2, CloudCheck, HardDrive,
+  Minus, Plus, ArrowLeftRight, Loader2, CloudCheck, HardDrive, Calculator,
 } from 'lucide-react';
 import { appliancePresets } from '@/lib/mock-data';
 import { APPLIANCE_CATEGORY_LABELS, METER_TYPE_LABELS, type ApplianceCategory } from '@/lib/domain';
@@ -102,7 +102,7 @@ function UnitConverter() {
 }
 
 export function AppliancesView() {
-  const { scenarios, appliances, setAppliance } = useDashboardStore();
+  const { scenarios, appliances, setAppliance, startSimulation } = useDashboardStore();
   const [scenarioId, setScenarioId] = useState(scenarios[0]?.id ?? '');
   const [category, setCategory] = useState<ApplianceCategory | 'all'>('all');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -259,6 +259,16 @@ export function AppliancesView() {
                 </p>
               </div>
             </div>
+
+            {/* 一键带入推演：用电器总耗电作为推演电量 */}
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={totalKwh <= 0 || !scenario}
+              onClick={() => startSimulation(scenarioId, Math.round(totalKwh * 10) / 10)}
+            >
+              <Calculator /> 带入推演（{formatEnergy(totalKwh)}）
+            </Button>
           </CardContent>
         </Card>
 
