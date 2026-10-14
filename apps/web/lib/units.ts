@@ -66,6 +66,7 @@ function trimNum(n: number, digits = 2): string {
  *   < 1 kWh → Wh；1–10000 → 度；≥ 10000 → 万度
  */
 export function formatEnergy(kwh: number): string {
+  if (kwh < 0) return `-${formatEnergy(-kwh)}`;
   if (kwh >= 10_000) return `${trimNum(kwh / 10_000)} 万度`;
   if (kwh >= 1) return `${trimNum(kwh)} 度`;
   if (kwh > 0) return `${Math.round(kwh * 1000)} Wh`;

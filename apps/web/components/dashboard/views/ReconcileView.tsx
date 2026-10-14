@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import {
   ReceiptText, Loader2, AlertCircle, Lightbulb, Scale, Trash2, ChevronDown,
+  Calculator, TrendingUp, TrendingDown,
 } from 'lucide-react';
 import {
   reconcileBill, saveBillAction, deleteBillAction, type ReconcileActionResult,
@@ -69,7 +70,7 @@ function ProfileCompare({
 }
 
 export function ReconcileView() {
-  const { scenarios, bills, addBill, removeBill } = useDashboardStore();
+  const { scenarios, bills, addBill, removeBill, startSimulation } = useDashboardStore();
   const [scenarioId, setScenarioId] = useState(scenarios[0]?.id ?? '');
   const [period, setPeriod] = useState(lastMonth());
   const [totalKwh, setTotalKwh] = useState('');
@@ -87,6 +88,18 @@ export function ReconcileView() {
   const scenarioBills = bills
     .filter((b) => b.scenario_id === scenarioId)
     .sort((a, b) => b.period.localeCompare(a.period));
+
+  // 环比洞察：最新两期账单对比（用电/电费/均价）
+  const mom = scenarioBills.length >= 2
+    ? (() => {
+        const [latest, prev] = scenarioBills;
+        const kwhDelta = (latest.total_kwh - prev.total_kwh) / prev.total_kwh * 100;
+        const costDelta = (latest.total_cost - prev.total_cost) / prev.total_cost * 100;
+        const latestAvg = latest.total_cost / latest.total_kwh;
+        const prevAvg = prev.total_cost / prev.total_kwh;
+        return { latest, prev, kwhDelta, costDelta, latestAvg, prevAvg };
+      })()
+    : null;
 
   function submit() {
     if (!scenario) return;
@@ -289,6 +302,20 @@ export function ReconcileView() {
                     </div>
                   ))}
                 </div>
+
+                {/* 一键用真实画像推演 */}
+                {ok.implied_profile && scenario && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() =>
+                      startSimulation(scenario.id, Number(totalKwh), ok.implied_profile)
+                    }
+                  >
+                    <Calculator /> 用真实画像推演（{formatEnergy(Number(totalKwh))} ·
+                    峰{ok.implied_profile['峰']}% 平{ok.implied_profile['平']}% 谷{ok.implied_profile['谷']}%）
+                  </Button>
+                )}
               </>
             ) : (
               <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
@@ -309,7 +336,43 @@ export function ReconcileView() {
               : '选择场景查看历史账单'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* 环比洞察（有 2 期以上账单时） */}
+          {mom && (
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border/60 p-4 text-sm">
+              <span className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">较 {mom.prev.period}：</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                {mom.kwhDelta > 0 ? (
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-accent" />
+                )}
+                用电 {mom.kwhDelta >= 0 ? '+' : ''}{mom.kwhDelta.toFixed(1)}%
+                <span className="text-muted-foreground">
+                  （{mom.kwhDelta >= 0 ? '+' : ''}{formatEnergy(mom.latest.total_kwh - mom.prev.total_kwh)}）
+                </span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                {mom.costDelta > 0 ? (
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-accent" />
+                )}
+                电费 {mom.costDelta >= 0 ? '+' : ''}{mom.costDelta.toFixed(1)}%
+                <span className="text-muted-foreground">
+                  （{mom.costDelta >= 0 ? '+' : ''}¥{(mom.latest.total_cost - mom.prev.total_cost).toFixed(2)}）
+                </span>
+              </span>
+              <span className="text-muted-foreground">
+                均价 ¥{mom.prevAvg.toFixed(4)} → ¥{mom.latestAvg.toFixed(4)}/度
+                {mom.latestAvg < mom.prevAvg && '（用电结构在变好）'}
+                {mom.latestAvg > mom.prevAvg * 1.03 && '（均价明显上升，检查峰段用电或是否进入更高阶梯）'}
+              </span>
+            </div>
+          )}
+
           {scenarioBills.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-sm">

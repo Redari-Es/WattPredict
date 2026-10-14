@@ -41,7 +41,9 @@ interface DashboardState {
   /** 推演视图预选的场景与电量 */
   simScenarioId: string | null;
   simKwh: number | null;
-  startSimulation: (scenarioId: string, kwh: number) => void;
+  /** 账单核对反推出的真实画像（一键带入推演时设置） */
+  simTouProfile: Record<string, number> | null;
+  startSimulation: (scenarioId: string, kwh: number, touProfile?: Record<string, number>) => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
@@ -100,6 +102,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   simScenarioId: null,
   simKwh: null,
-  startSimulation: (scenarioId, kwh) =>
-    set({ view: 'simulate', simScenarioId: scenarioId, simKwh: kwh }),
+  simTouProfile: null,
+  startSimulation: (scenarioId, kwh, touProfile) =>
+    set({ view: 'simulate', simScenarioId: scenarioId, simKwh: kwh, simTouProfile: touProfile ?? null }),
 }));

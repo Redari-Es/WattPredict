@@ -4,7 +4,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { Layers, Zap, Plug, PiggyBank, ArrowRight, Plus, Calculator } from 'lucide-react';
+import { Layers, Zap, Plug, PiggyBank, ArrowRight, Plus, Calculator, ReceiptText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ const tooltipStyle = {
 } as const;
 
 export function OverviewView() {
-  const { scenarios, appliances, simulationRuns, setView, startSimulation } = useDashboardStore();
+  const { scenarios, appliances, simulationRuns, bills, setView, startSimulation } = useDashboardStore();
 
   // ---------- 真实数据聚合 ----------
   const totalKwh = scenarios.reduce((s, sc) => s + sc.monthly_kwh, 0);
@@ -55,6 +55,29 @@ export function OverviewView() {
     现行方案: r.flat_result.total_cost,
     分时方案: r.tou_result?.total_cost ?? null,
   }));
+
+  // 推演 vs 实缴：账单账期（YYYY-MM）匹配同场景当月推演记录（现行方案）
+  const accuracyData = (() => {
+    const byPeriod = new Map<string, { 推演: number; 实缴: number }>();
+    for (const b of bills) {
+      // simulationRuns 按时间倒序，find 命中的即该账期当月最近一次推演
+      const run = simulationRuns.find(
+        (r) => r.scenario_id === b.scenario_id && r.created_at.startsWith(b.period),
+      );
+      if (!run) continue;
+      const cur = byPeriod.get(b.period) ?? { 推演: 0, 实缴: 0 };
+      cur.推演 += run.flat_result.total_cost;
+      cur.实缴 += b.total_cost;
+      byPeriod.set(b.period, cur);
+    }
+    return [...byPeriod.entries()]
+      .map(([period, v]) => ({ period, ...v }))
+      .sort((a, b) => a.period.localeCompare(b.period));
+  })();
+  // 平均偏差率（|推演-实缴|/实缴 的逐期平均）
+  const avgDeviation = accuracyData.length > 0
+    ? accuracyData.reduce((s, d) => s + Math.abs(d.推演 - d.实缴) / d.实缴, 0) / accuracyData.length * 100
+    : null;
 
   return (
     <div className="space-y-6">
@@ -155,6 +178,48 @@ export function OverviewView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 推演 vs 实缴：模型准确度趋势 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>推演 vs 实缴</CardTitle>
+              <CardDescription>
+                账单账期与当月推演的比对——录得越多，瓦特预言越懂你的用电
+              </CardDescription>
+            </div>
+            {avgDeviation != null && (
+              <Badge variant={avgDeviation <= 5 ? 'cyan' : 'amber'}>
+                平均偏差 {avgDeviation.toFixed(1)}%
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="h-64">
+          {accuracyData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={accuracyData} barGap={4}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 4% 16%)" vertical={false} />
+                <XAxis dataKey="period" tick={{ fill: 'hsl(240 5% 64%)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'hsl(240 5% 64%)', fontSize: 12 }} axisLine={false} tickLine={false} width={48} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value) => [`¥${Number(value).toFixed(2)}`]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="推演" fill={CYAN} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="实缴" fill={AMBER} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+              <ReceiptText className="h-8 w-8 opacity-40" />
+              <p>{bills.length > 0 ? '账单已录入，去对应场景做一次推演即可看到比对' : '还没有账单记录'}</p>
+              <Button variant="outline" size="sm" onClick={() => setView('reconcile')}>
+                去核对账单 <ArrowRight />
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* 场景速览 */}
       <Card>

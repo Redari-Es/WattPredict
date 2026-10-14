@@ -120,7 +120,7 @@ function PlanCard({
 }
 
 export function SimulateView() {
-  const { scenarios, simScenarioId, simKwh, addSimulationRun } = useDashboardStore();
+  const { scenarios, simScenarioId, simKwh, simTouProfile, addSimulationRun } = useDashboardStore();
   const [scenarioId, setScenarioId] = useState(simScenarioId ?? scenarios[0]?.id ?? '');
   const [kwh, setKwh] = useState(String(simKwh ?? scenarios[0]?.monthly_kwh ?? 420));
   const [pending, startTransition] = useTransition();
@@ -129,7 +129,10 @@ export function SimulateView() {
 
   const scenario = scenarios.find((s) => s.id === scenarioId);
   const meterType = scenario?.meter_type ?? 'residential';
-  const [touProfile, setTouProfile] = useState<Record<string, number>>({ ...DEFAULT_TOU_PROFILE[meterType] });
+  // 账单核对带入的真实画像优先，否则用电表类型默认画像
+  const [touProfile, setTouProfile] = useState<Record<string, number>>(
+    simTouProfile ? { ...simTouProfile } : { ...DEFAULT_TOU_PROFILE[meterType] },
+  );
 
   // 切换场景（电表类型变化）时重置画像为该类型默认值
   const [prevMeterType, setPrevMeterType] = useState(meterType);
