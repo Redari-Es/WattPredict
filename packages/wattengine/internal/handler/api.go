@@ -41,6 +41,39 @@ func Simulate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Reconcile 处理 POST /api/reconcile
+func Reconcile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req tariff.ReconcileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if req.TotalKwh <= 0 {
+		writeError(w, http.StatusBadRequest, "total_kwh must be positive")
+		return
+	}
+	if req.Province == "" || req.MeterType == "" {
+		writeError(w, http.StatusBadRequest, "province and meter_type are required")
+		return
+	}
+
+	result, err := tariff.Reconcile(&req)
+	if err != nil {
+		log.Printf("reconcile error: %v", err)
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		log.Printf("encode response: %v", err)
+	}
+}
+
 // Health 处理 GET /healthz
 func Health(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {

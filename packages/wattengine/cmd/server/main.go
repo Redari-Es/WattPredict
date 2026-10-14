@@ -19,6 +19,7 @@ func main() {
 	// 方法校验在各 handler 内完成。
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/simulate", handler.Simulate)
+	mux.HandleFunc("/api/reconcile", handler.Reconcile)
 	mux.HandleFunc("/healthz", handler.Health)
 
 	log.Printf("wattengine listening on :%s", port)

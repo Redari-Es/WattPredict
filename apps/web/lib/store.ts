@@ -1,10 +1,10 @@
 'use client';
 
 import { create } from 'zustand';
-import type { ScenarioRecord, ScenarioAppliance, SimulationRun } from './domain';
+import type { ScenarioRecord, ScenarioAppliance, SimulationRun, BillRecord } from './domain';
 import { seedScenarios } from './mock-data';
 
-export type DashboardView = 'overview' | 'scenarios' | 'simulate' | 'appliances';
+export type DashboardView = 'overview' | 'scenarios' | 'simulate' | 'appliances' | 'reconcile';
 
 interface DashboardState {
   view: DashboardView;
@@ -31,6 +31,12 @@ interface DashboardState {
   simulationRuns: SimulationRun[];
   initSimulationRuns: (list: SimulationRun[] | null) => void;
   addSimulationRun: (run: SimulationRun) => void;
+
+  /** 真实账单（按时间倒序，账单核对的输入） */
+  bills: BillRecord[];
+  initBills: (list: BillRecord[] | null) => void;
+  addBill: (bill: BillRecord) => void;
+  removeBill: (id: string) => void;
 
   /** 推演视图预选的场景与电量 */
   simScenarioId: string | null;
@@ -77,6 +83,20 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   initSimulationRuns: (list) => set({ simulationRuns: list ?? [] }),
   addSimulationRun: (run) =>
     set((state) => ({ simulationRuns: [run, ...state.simulationRuns] })),
+
+  bills: [],
+  initBills: (list) => set({ bills: list ?? [] }),
+  addBill: (bill) =>
+    set((state) => ({
+      // 同一场景同一账期只保留最新一条（与 DB unique 约束一致）
+      bills: [
+        bill,
+        ...state.bills.filter(
+          (b) => !(b.scenario_id === bill.scenario_id && b.period === bill.period),
+        ),
+      ],
+    })),
+  removeBill: (id) => set((state) => ({ bills: state.bills.filter((b) => b.id !== id) })),
 
   simScenarioId: null,
   simKwh: null,

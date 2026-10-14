@@ -1,9 +1,9 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { ScenarioSchema, type SimulationResult } from '@/lib/types';
-import type { ScenarioRecord, SimulationRun } from '@/lib/domain';
-import { simulate } from '@/lib/engine';
+import { ScenarioSchema, BillInputSchema, type SimulationResult, type ReconcileResult } from '@/lib/types';
+import type { ScenarioRecord, SimulationRun, BillRecord } from '@/lib/domain';
+import { simulate, reconcile } from '@/lib/engine';
 import { createClient } from '@/lib/supabase/server';
 
 export type SimulateActionResult =
@@ -148,5 +148,77 @@ export async function saveAppliancesAction(
     const { error } = await supabase.from('appliances').insert(rows);
     if (error) return { ok: false, error: error.message };
   }
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// 账单核对（Reconcile）：真实账单 → 瓦特引擎反推 → 偏差诊断
+// ---------------------------------------------------------------------------
+
+export type ReconcileActionResult =
+  | { ok: true; result: ReconcileResult }
+  | { ok: false; error: string };
+
+/** 调用瓦特引擎核对账单（不落库，仅计算） */
+export async function reconcileBill(
+  scenario: Pick<ScenarioRecord, 'province' | 'meter_type' | 'transformer_kva' | 'demand_kw'>,
+  bill: unknown,
+): Promise<ReconcileActionResult> {
+  const parsed = BillInputSchema.safeParse(bill);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
+  }
+  const { peak_kwh, flat_kwh, valley_kwh } = parsed.data;
+  // 三项明细齐全才传给引擎（缺一则视为无分时明细）
+  const hasTouDetail =
+    peak_kwh != null && flat_kwh != null && valley_kwh != null &&
+    peak_kwh + flat_kwh + valley_kwh > 0;
+
+  try {
+    const result = await reconcile({
+      province: scenario.province,
+      meter_type: scenario.meter_type,
+      transformer_kva: scenario.transformer_kva,
+      demand_kw: scenario.demand_kw,
+      total_kwh: parsed.data.total_kwh,
+      total_cost: parsed.data.total_cost,
+      ...(hasTouDetail ? { peak_kwh, flat_kwh, valley_kwh } : {}),
+    });
+    return { ok: true, result };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : '瓦特引擎暂不可用' };
+  }
+}
+
+/** 保存账单（同场景同账期 upsert） */
+export async function saveBillAction(input: {
+  scenario_id: string;
+  period: string;
+  total_kwh: number;
+  total_cost: number;
+  peak_kwh?: number | null;
+  flat_kwh?: number | null;
+  valley_kwh?: number | null;
+}): Promise<{ ok: boolean; bill?: BillRecord; error?: string }> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: 'Supabase 未配置' };
+
+  const { data, error } = await supabase
+    .from('bills')
+    .upsert(input, { onConflict: 'scenario_id,period' })
+    .select()
+    .single();
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, bill: data as BillRecord };
+}
+
+/** 删除账单：RLS 限制只能删自己场景下的 */
+export async function deleteBillAction(id: string): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: 'Supabase 未配置' };
+
+  const { error } = await supabase.from('bills').delete().eq('id', id);
+  if (error) return { ok: false, error: error.message };
   return { ok: true };
 }

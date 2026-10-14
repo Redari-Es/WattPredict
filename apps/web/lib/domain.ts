@@ -75,6 +75,19 @@ export interface SimulationRun {
   created_at: string;
 }
 
+/** 真实电费账单（对应 bills 表，账单核对/画像反推的输入） */
+export interface BillRecord {
+  id: string;
+  scenario_id: string;
+  period: string; // 'YYYY-MM'
+  total_kwh: number;
+  total_cost: number;
+  peak_kwh?: number | null;
+  flat_kwh?: number | null;
+  valley_kwh?: number | null;
+  created_at: string;
+}
+
 export const METER_TYPE_LABELS: Record<MeterType, string> = {
   residential: '家庭',
   commercial: '商业',

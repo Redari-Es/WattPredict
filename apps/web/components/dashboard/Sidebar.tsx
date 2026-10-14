@@ -1,6 +1,6 @@
 'use client';
 
-import { Zap, LayoutDashboard, Layers, Calculator, Plug, X } from 'lucide-react';
+import { Zap, LayoutDashboard, Layers, Calculator, Plug, ReceiptText, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDashboardStore, type DashboardView } from '@/lib/store';
 
@@ -9,6 +9,7 @@ const NAV_ITEMS: Array<{ key: DashboardView; label: string; icon: typeof Zap }> 
   { key: 'scenarios', label: '用电场景', icon: Layers },
   { key: 'simulate', label: '电费推演', icon: Calculator },
   { key: 'appliances', label: '电器预设', icon: Plug },
+  { key: 'reconcile', label: '账单核对', icon: ReceiptText },
 ];
 
 export function Sidebar({

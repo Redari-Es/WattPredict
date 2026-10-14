@@ -46,3 +46,25 @@ export interface SimulationResult {
   tou?: TouPeriodResult[];
   savings?: SavingsSuggestion;
 }
+
+/** 账单核对输入（真实电费账单） */
+export const BillInputSchema = z.object({
+  total_kwh: z.coerce.number().positive('电量必须大于 0'),
+  total_cost: z.coerce.number().min(0, '金额不能为负'),
+  // 分时明细：三项同时提供才用于反推画像
+  peak_kwh: z.coerce.number().min(0).optional(),
+  flat_kwh: z.coerce.number().min(0).optional(),
+  valley_kwh: z.coerce.number().min(0).optional(),
+});
+
+export type BillInput = z.infer<typeof BillInputSchema>;
+
+/** 账单核对结果（瓦特引擎 /api/reconcile 响应） */
+export interface ReconcileResult {
+  implied_avg_price: number;
+  implied_profile?: Record<string, number>;
+  simulated: SimulationResult;
+  deviation_cost: number;
+  deviation_pct: number;
+  diagnosis: string[];
+}

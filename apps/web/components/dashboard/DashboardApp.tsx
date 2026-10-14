@@ -2,37 +2,42 @@
 
 import { useEffect, useState } from 'react';
 import { useDashboardStore } from '@/lib/store';
-import type { ScenarioRecord, ScenarioAppliance, SimulationRun } from '@/lib/domain';
+import type { ScenarioRecord, ScenarioAppliance, SimulationRun, BillRecord } from '@/lib/domain';
 import { Sidebar } from './Sidebar';
 import { Header, type HeaderUser } from './Header';
 import { OverviewView } from './views/OverviewView';
 import { ScenariosView } from './views/ScenariosView';
 import { SimulateView } from './views/SimulateView';
 import { AppliancesView } from './views/AppliancesView';
+import { ReconcileView } from './views/ReconcileView';
 
 export function DashboardApp({
   user,
   initialScenarios,
   initialAppliances,
   initialSimulationRuns,
+  initialBills,
 }: {
   user: HeaderUser;
   /** null = 开发模式（使用演示数据）；数组 = Supabase 真实数据 */
   initialScenarios: ScenarioRecord[] | null;
   initialAppliances: ScenarioAppliance[] | null;
   initialSimulationRuns: SimulationRun[] | null;
+  initialBills: BillRecord[] | null;
 }) {
   const view = useDashboardStore((s) => s.view);
   const initScenarios = useDashboardStore((s) => s.initScenarios);
   const initAppliances = useDashboardStore((s) => s.initAppliances);
   const initSimulationRuns = useDashboardStore((s) => s.initSimulationRuns);
+  const initBills = useDashboardStore((s) => s.initBills);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     initScenarios(initialScenarios);
     initAppliances(initialAppliances);
     initSimulationRuns(initialSimulationRuns);
-  }, [initialScenarios, initialAppliances, initialSimulationRuns, initScenarios, initAppliances, initSimulationRuns]);
+    initBills(initialBills);
+  }, [initialScenarios, initialAppliances, initialSimulationRuns, initialBills, initScenarios, initAppliances, initSimulationRuns, initBills]);
 
   return (
     <div className="relative flex h-screen overflow-hidden bg-background">
@@ -49,6 +54,7 @@ export function DashboardApp({
           {view === 'scenarios' && <ScenariosView />}
           {view === 'simulate' && <SimulateView />}
           {view === 'appliances' && <AppliancesView />}
+          {view === 'reconcile' && <ReconcileView />}
         </main>
       </div>
     </div>

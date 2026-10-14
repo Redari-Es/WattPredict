@@ -22,6 +22,7 @@ const VIEW_TITLES = {
   scenarios: '用电场景',
   simulate: '电费推演',
   appliances: '电器预设',
+  reconcile: '账单核对',
 } as const;
 
 export interface HeaderUser {

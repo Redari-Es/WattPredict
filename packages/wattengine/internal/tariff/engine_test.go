@@ -105,3 +105,64 @@ func TestCalculateCost_Errors(t *testing.T) {
 		t.Error("expected error for unknown province")
 	}
 }
+
+func TestReconcile_WithTouDetail(t *testing.T) {
+	peak, flat, valley := 105.0, 231.0, 84.0
+	total := peak + flat + valley // 420
+	// 按 2025 核价推演金额作为"账单金额" → 偏差应≈0
+	cost := 105*1.0011 + 231*0.5889 + 84*0.2238
+	req := &ReconcileRequest{
+		Province: "GD", MeterType: MeterResidential,
+		TotalKwh: total, TotalCost: cost,
+		PeakKwh: &peak, FlatKwh: &flat, ValleyKwh: &valley,
+	}
+	resp, err := Reconcile(req)
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if resp.ImpliedProfile == nil {
+		t.Fatal("expected implied profile from tou detail")
+	}
+	if resp.ImpliedProfile["峰"] != 25 || resp.ImpliedProfile["平"] != 55 || resp.ImpliedProfile["谷"] != 20 {
+		t.Errorf("implied profile = %v, want 峰25 平55 谷20", resp.ImpliedProfile)
+	}
+	if resp.DeviationCost != 0 {
+		t.Errorf("deviation = %v, want 0 (bill matches simulation)", resp.DeviationCost)
+	}
+	if len(resp.Diagnosis) == 0 {
+		t.Error("expected diagnosis text")
+	}
+}
+
+func TestReconcile_WithoutTouDetail(t *testing.T) {
+	// 420 度阶梯 = 255.34 元；账单报 290 元 → 偏差 +34.66（+12.0%）
+	req := &ReconcileRequest{
+		Province: "GD", MeterType: MeterResidential,
+		TotalKwh: 420, TotalCost: 290,
+	}
+	resp, err := Reconcile(req)
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if resp.ImpliedProfile != nil {
+		t.Error("no tou detail → implied profile should be nil")
+	}
+	if resp.Simulated.TotalCost != 255.34 {
+		t.Errorf("simulated = %v, want 255.34", resp.Simulated.TotalCost)
+	}
+	if resp.DeviationCost != 34.66 {
+		t.Errorf("deviation = %v, want 34.66", resp.DeviationCost)
+	}
+	if resp.ImpliedAvgPrice != round4(290.0/420.0) {
+		t.Errorf("avg price = %v, want %v", resp.ImpliedAvgPrice, round4(290.0/420.0))
+	}
+}
+
+func TestReconcile_Errors(t *testing.T) {
+	if _, err := Reconcile(&ReconcileRequest{Province: "GD", MeterType: MeterResidential, TotalKwh: 0, TotalCost: 10}); err == nil {
+		t.Error("expected error for zero kwh")
+	}
+	if _, err := Reconcile(&ReconcileRequest{Province: "XX", MeterType: MeterResidential, TotalKwh: 100, TotalCost: 60}); err == nil {
+		t.Error("expected error for unknown province")
+	}
+}

@@ -92,3 +92,28 @@ type BasicFeeRule struct {
 	PerKva      float64 `json:"per_kva"`
 	PerKwDemand float64 `json:"per_kw_demand"`
 }
+
+// ReconcileRequest 账单核对请求：用真实账单反推用电画像并校验推演偏差
+type ReconcileRequest struct {
+	Province  string    `json:"province"`
+	MeterType MeterType `json:"meter_type"`
+	// 工业两部制参数
+	TransformerKva float64 `json:"transformer_kva,omitempty"`
+	DemandKw       float64 `json:"demand_kw,omitempty"`
+	// 账单数据
+	TotalKwh  float64  `json:"total_kwh"`
+	TotalCost float64  `json:"total_cost"`
+	PeakKwh   *float64 `json:"peak_kwh,omitempty"`   // 峰段电量（账单有分时明细时）
+	FlatKwh   *float64 `json:"flat_kwh,omitempty"`   // 平段电量
+	ValleyKwh *float64 `json:"valley_kwh,omitempty"` // 谷段电量
+}
+
+// ReconcileResponse 账单核对响应
+type ReconcileResponse struct {
+	ImpliedAvgPrice float64            `json:"implied_avg_price"`        // 实际均价（元/度）
+	ImpliedProfile  map[string]float64 `json:"implied_profile,omitempty"` // 反推出的真实分时画像（百分比）
+	Simulated       *SimulateResponse  `json:"simulated"`                // 按账单电量（+反推画像）的推演结果
+	DeviationCost   float64            `json:"deviation_cost"`           // 实际金额 - 推演金额
+	DeviationPct    float64            `json:"deviation_pct"`            // 偏差率（%，相对实际金额）
+	Diagnosis       []string           `json:"diagnosis"`                // 诊断结论（人话）
+}
