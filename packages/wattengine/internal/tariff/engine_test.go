@@ -166,3 +166,68 @@ func TestReconcile_Errors(t *testing.T) {
 		t.Error("expected error for unknown province")
 	}
 }
+
+func TestCalculateCost_SeasonalTiers(t *testing.T) {
+	// 420 度：夏季档（7月）= 255.34；非夏季档（1月）= 200*0.5889 + 200*0.6389 + 20*0.8889 = 263.34
+	summer := req(MeterResidential, 420)
+	summer.Month = 7
+	resp, err := CalculateCost(summer)
+	if err != nil {
+		t.Fatalf("summer: %v", err)
+	}
+	if resp.TotalCost != 255.34 {
+		t.Errorf("summer total = %v, want 255.34", resp.TotalCost)
+	}
+
+	winter := req(MeterResidential, 420)
+	winter.Month = 1
+	resp, err = CalculateCost(winter)
+	if err != nil {
+		t.Fatalf("winter: %v", err)
+	}
+	if resp.TotalCost != 263.34 {
+		t.Errorf("winter total = %v, want 263.34", resp.TotalCost)
+	}
+
+	// 缺省 month 保持夏季档（兼容旧行为）
+	resp, err = CalculateCost(req(MeterResidential, 420))
+	if err != nil {
+		t.Fatalf("default: %v", err)
+	}
+	if resp.TotalCost != 255.34 {
+		t.Errorf("default total = %v, want 255.34 (summer)", resp.TotalCost)
+	}
+}
+
+func TestRecommendations(t *testing.T) {
+	// 居民进第三档 → 阶梯预警
+	r := req(MeterResidential, 700)
+	resp, err := CalculateCost(r)
+	if err != nil {
+		t.Fatalf("residential: %v", err)
+	}
+	if len(resp.Recommendations) == 0 {
+		t.Error("expected tier-3 alert for 700 kwh residential")
+	}
+
+	// 商业未开通分时 → 分时测算提示
+	resp, err = CalculateCost(req(MeterCommercial, 2800))
+	if err != nil {
+		t.Fatalf("commercial: %v", err)
+	}
+	if len(resp.Recommendations) == 0 {
+		t.Error("expected TOU hint for commercial without tou")
+	}
+
+	// 工业容需：容量 250kVA(5650) vs 需量 180kW(6498) → 建议按容量
+	ind := req(MeterIndustrial, 46000)
+	ind.TransformerKva = 250
+	ind.DemandKw = 180
+	resp, err = CalculateCost(ind)
+	if err != nil {
+		t.Fatalf("industrial: %v", err)
+	}
+	if len(resp.Recommendations) == 0 {
+		t.Error("expected kva/demand declaration suggestion for industrial")
+	}
+}

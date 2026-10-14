@@ -17,6 +17,8 @@ type SimulateRequest struct {
 	MeterType  MeterType `json:"meter_type"`
 	HasTOU     bool      `json:"has_tou"`
 	MonthlyKwh float64   `json:"monthly_kwh"`
+	// 月份（1-12），用于季节阶梯分档（广东居民 5-10 月夏季档 260/600，其余 200/400）；缺省按夏季档
+	Month int `json:"month,omitempty"`
 	// 工业两部制参数
 	TransformerKva float64 `json:"transformer_kva,omitempty"`
 	DemandKw       float64 `json:"demand_kw,omitempty"`
@@ -49,22 +51,26 @@ type SavingsSuggestion struct {
 
 // SimulateResponse 推演响应
 type SimulateResponse struct {
-	TotalCost  float64            `json:"total_cost"`          // 总电费（电度电费 + 基本电费）
-	EnergyCost float64            `json:"energy_cost"`         // 电度电费
-	BasicFee   float64            `json:"basic_fee,omitempty"` // 基本电费（工业两部制）
-	Breakdown  []TierResult       `json:"breakdown"`           // 阶梯/单一制明细
-	Tou        []TouPeriodResult  `json:"tou,omitempty"`       // 分时明细（has_tou 时）
-	Savings    *SavingsSuggestion `json:"savings,omitempty"`
+	TotalCost       float64            `json:"total_cost"`          // 总电费（电度电费 + 基本电费）
+	EnergyCost      float64            `json:"energy_cost"`         // 电度电费
+	BasicFee        float64            `json:"basic_fee,omitempty"` // 基本电费（工业两部制）
+	Breakdown       []TierResult       `json:"breakdown"`           // 阶梯/单一制明细
+	Tou             []TouPeriodResult  `json:"tou,omitempty"`       // 分时明细（has_tou 时）
+	Savings         *SavingsSuggestion `json:"savings,omitempty"`
+	Recommendations []string           `json:"recommendations,omitempty"` // 行动建议（换方案/申报/削峰等）
 }
 
 // Rule 电价规则：阶梯 / 单一制 / 分时 / 两部制按需组合
 type Rule struct {
 	Province  string        `json:"province"`
 	MeterType MeterType     `json:"meter_type"`
-	Tiers     []Tier        `json:"tiers,omitempty"`      // 阶梯电价（居民）
+	Tiers     []Tier        `json:"tiers,omitempty"`      // 阶梯电价（居民，夏季档）
 	FlatPrice float64       `json:"flat_price,omitempty"` // 单一制电价（非分时）
 	Tou       *TouRule      `json:"tou,omitempty"`        // 分时电价
 	BasicFee  *BasicFeeRule `json:"basic_fee,omitempty"`  // 两部制基本电费（工业）
+	// 非夏季阶梯档（可选）：summer_months 之外的月份使用
+	TiersWinter  []Tier `json:"tiers_winter,omitempty"`
+	SummerMonths []int  `json:"summer_months,omitempty"` // 夏季档月份，如 [5,6,7,8,9,10]
 }
 
 // Tier 阶梯电价：上限电量（kwh，-1 表示无上限）与单价（元/kWh）
@@ -103,6 +109,7 @@ type ReconcileRequest struct {
 	// 账单数据
 	TotalKwh  float64  `json:"total_kwh"`
 	TotalCost float64  `json:"total_cost"`
+	Month     int      `json:"month,omitempty"`        // 账期月份（1-12），用于季节阶梯分档
 	PeakKwh   *float64 `json:"peak_kwh,omitempty"`   // 峰段电量（账单有分时明细时）
 	FlatKwh   *float64 `json:"flat_kwh,omitempty"`   // 平段电量
 	ValleyKwh *float64 `json:"valley_kwh,omitempty"` // 谷段电量

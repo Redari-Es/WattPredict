@@ -70,7 +70,7 @@ func CalculateCost(req *SimulateRequest) (*SimulateResponse, error) {
 	case req.HasTOU && rule.Tou != nil:
 		computeTOU(resp, rule.Tou, req)
 	case len(rule.Tiers) > 0:
-		computeTiers(resp, rule.Tiers, req.MonthlyKwh)
+		computeTiers(resp, tiersForMonth(rule, req.Month), req.MonthlyKwh)
 	case rule.FlatPrice > 0:
 		cost := req.MonthlyKwh * rule.FlatPrice
 		resp.EnergyCost = cost
@@ -91,7 +91,88 @@ func CalculateCost(req *SimulateRequest) (*SimulateResponse, error) {
 	}
 
 	resp.TotalCost = round2(resp.EnergyCost + resp.BasicFee)
+	resp.Recommendations = recommend(req, rule, resp)
 	return resp, nil
+}
+
+// tiersForMonth 按月份选择阶梯档：非夏季月使用 tiers_winter（若规则提供）
+func tiersForMonth(rule Rule, month int) []Tier {
+	if len(rule.TiersWinter) == 0 || len(rule.SummerMonths) == 0 || month < 1 || month > 12 {
+		return rule.Tiers
+	}
+	for _, m := range rule.SummerMonths {
+		if m == month {
+			return rule.Tiers
+		}
+	}
+	return rule.TiersWinter
+}
+
+// recommend 生成行动建议：从"算电费"升级为"给方案"
+func recommend(req *SimulateRequest, rule Rule, resp *SimulateResponse) []string {
+	var out []string
+
+	// 居民阶梯预警（非分时）
+	if len(rule.Tiers) > 0 && !req.HasTOU {
+		// 第三档电量 > 0 说明已进最高档
+		if len(resp.Breakdown) > 0 && resp.Breakdown[len(resp.Breakdown)-1].Price == rule.Tiers[len(rule.Tiers)-1].Price && len(resp.Breakdown) == len(rule.Tiers) {
+			top := resp.Breakdown[len(resp.Breakdown)-1]
+			out = append(out, fmt.Sprintf(
+				"已进入第三档（%s），超档%s按 %.4f 元/度计费——削减高耗设备或评估光伏发电可显著降费",
+				top.Tier, formatKwh(top.Kwh), top.Price))
+		}
+	}
+
+	// 商业：未开通分时 → 提示测算
+	if req.MeterType == MeterCommercial && !req.HasTOU && rule.Tou != nil {
+		var peakP, valleyP float64
+		for _, p := range rule.Tou.Periods {
+			if p.Price > peakP {
+				peakP = p.Price
+			}
+			if valleyP == 0 || p.Price < valleyP {
+				valleyP = p.Price
+			}
+		}
+		out = append(out, fmt.Sprintf(
+			"商业用电峰谷价差大（峰 %.4f / 谷 %.4f 元/度）——若谷段用电占比可超过约 25%%（如夜间营业、可定时设备），转分时计价更划算，可在推演页验证",
+			peakP, valleyP))
+	}
+
+	// 工业：容需申报建议
+	if rule.BasicFee != nil {
+		var byKva, byDemand float64
+		if req.TransformerKva > 0 {
+			byKva = req.TransformerKva * rule.BasicFee.PerKva
+		}
+		if req.DemandKw > 0 {
+			byDemand = req.DemandKw * rule.BasicFee.PerKwDemand
+		}
+		switch {
+		case byKva > 0 && byDemand > 0 && byKva > byDemand:
+			out = append(out, fmt.Sprintf(
+				"按需量计费 ¥%.2f 低于按容量 ¥%.2f——若当前按容量缴费，改为按实际最大需量申报可月省 ¥%.2f",
+				byDemand, byKva, byKva-byDemand))
+		case byKva > 0 && byDemand > 0 && byDemand > byKva:
+			out = append(out, fmt.Sprintf(
+				"按容量计费 ¥%.2f 低于按需量 ¥%.2f——若当前按需量缴费，改为按变压器容量申报可月省 ¥%.2f",
+				byKva, byDemand, byDemand-byKva))
+		case byKva > 0 && byDemand == 0:
+			breakEven := byKva / rule.BasicFee.PerKwDemand
+			out = append(out, fmt.Sprintf(
+				"当前按容量计费 ¥%.2f/月——若实际最大需量长期低于 %.0f kW（容量的 %.0f%%），改按需量申报更省",
+				byKva, breakEven, breakEven/req.TransformerKva*100))
+		}
+	}
+
+	return out
+}
+
+func formatKwh(v float64) string {
+	if v >= 10000 {
+		return fmt.Sprintf("%.1f 万度", v/10000)
+	}
+	return fmt.Sprintf("%.0f 度", v)
 }
 
 // computeTiers 阶梯电价

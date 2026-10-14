@@ -3,14 +3,14 @@
 import { useState, useTransition } from 'react';
 import {
   ReceiptText, Loader2, AlertCircle, Lightbulb, Scale, Trash2, ChevronDown,
-  Calculator, TrendingUp, TrendingDown,
+  ChevronLeft, ChevronRight, CalendarDays, Calculator, TrendingUp, TrendingDown,
 } from 'lucide-react';
 import {
   reconcileBill, saveBillAction, deleteBillAction, type ReconcileActionResult,
 } from '@/app/actions';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { useDashboardStore } from '@/lib/store';
-import { METER_TYPE_LABELS, DEFAULT_TOU_PROFILE } from '@/lib/domain';
+import { METER_TYPE_LABELS, DEFAULT_TOU_PROFILE, type BillRecord } from '@/lib/domain';
 import { formatEnergy } from '@/lib/units';
 import type { ReconcileResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,101 @@ function lastMonth(): string {
   const d = new Date();
   d.setMonth(d.getMonth() - 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** 账单月历热力图：12 格年度视图，按金额着色，点击回填表单 */
+function BillHeatmap({
+  bills, onPick,
+}: { bills: BillRecord[]; onPick: (b: BillRecord) => void }) {
+  const now = new Date();
+  const thisYear = now.getFullYear();
+  const thisMonth = now.getMonth() + 1;
+  const [year, setYear] = useState(thisYear);
+
+  const byPeriod = new Map(bills.map((b) => [b.period, b]));
+  const maxCost = Math.max(1, ...bills.map((b) => b.total_cost));
+
+  // 连续记录月数：从最新一张账单往前逐月数
+  const streak = (() => {
+    const sorted = [...bills].sort((a, b) => b.period.localeCompare(a.period));
+    if (sorted.length === 0) return 0;
+    let [y, m] = sorted[0].period.split('-').map(Number);
+    let n = 0;
+    for (const b of sorted) {
+      if (b.period !== `${y}-${String(m).padStart(2, '0')}`) break;
+      n++;
+      if (--m === 0) { m = 12; y--; }
+    }
+    return n;
+  })();
+
+  const canPrev = bills.some((b) => Number(b.period.split('-')[0]) < year);
+  const canNext = year < thisYear;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" /> 账单月历
+            </CardTitle>
+            <CardDescription>颜色越深金额越高 · 点击已录月份回填表单快速核对</CardDescription>
+          </div>
+          {bills.length > 0 && (
+            <Badge variant={streak >= 2 ? 'cyan' : 'outline'}>
+              {streak >= 2 ? `连续记录 ${streak} 个月` : `共 ${bills.length} 张`}
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canPrev} onClick={() => setYear((y) => y - 1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium">{year} 年</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canNext} onClick={() => setYear((y) => y + 1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-6">
+          {Array.from({ length: 12 }, (_, i) => {
+            const month = i + 1;
+            const key = `${year}-${String(month).padStart(2, '0')}`;
+            const bill = byPeriod.get(key);
+            const future = year === thisYear && month > thisMonth;
+            if (bill) {
+              const intensity = 0.15 + 0.55 * (bill.total_cost / maxCost);
+              return (
+                <button
+                  key={key}
+                  onClick={() => onPick(bill)}
+                  className="rounded-lg border border-primary/40 p-3 text-left transition-transform hover:scale-[1.03]"
+                  style={{ backgroundColor: `hsl(43 96% 56% / ${intensity})` }}
+                >
+                  <p className="text-xs text-muted-foreground">{month} 月</p>
+                  <p className="mt-0.5 text-sm font-bold">¥{bill.total_cost.toFixed(0)}</p>
+                  <p className="text-[10px] text-muted-foreground">{formatEnergy(bill.total_kwh)}</p>
+                </button>
+              );
+            }
+            return (
+              <div
+                key={key}
+                className={`rounded-lg border border-dashed p-3 ${
+                  future ? 'border-border/30 opacity-40' : 'border-border/60'
+                }`}
+              >
+                <p className="text-xs text-muted-foreground">{month} 月</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">{future ? '—' : '未记录'}</p>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 /** 反推画像与默认画像的对比条 */
@@ -101,11 +196,25 @@ export function ReconcileView() {
       })()
     : null;
 
+  /** 热力图点击回填表单 */
+  function pickBill(b: BillRecord) {
+    setPeriod(b.period);
+    setTotalKwh(String(b.total_kwh));
+    setTotalCost(String(b.total_cost));
+    if (b.peak_kwh != null && b.flat_kwh != null && b.valley_kwh != null) {
+      setPeakKwh(String(b.peak_kwh));
+      setFlatKwh(String(b.flat_kwh));
+      setValleyKwh(String(b.valley_kwh));
+      setShowTou(true);
+    }
+  }
+
   function submit() {
     if (!scenario) return;
     setSaved(false);
     startTransition(async () => {
       const bill = {
+        period,
         total_kwh: totalKwh,
         total_cost: totalCost,
         peak_kwh: showTou && peakKwh !== '' ? peakKwh : undefined,
@@ -325,6 +434,9 @@ export function ReconcileView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 账单月历热力图 */}
+      {scenario && <BillHeatmap bills={scenarioBills} onPick={pickBill} />}
 
       {/* 账单历史 */}
       <Card>

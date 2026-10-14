@@ -14,6 +14,8 @@ export const ScenarioSchema = z.object({
   demand_kw: z.coerce.number().positive().optional(),
   // 分时用电画像（可选，如 {"峰":25,"平":55,"谷":20}，引擎自动归一化）
   tou_profile: z.record(z.string(), z.number().min(0)).optional(),
+  // 月份（1-12），用于季节阶梯分档；缺省由服务端取当前月
+  month: z.coerce.number().int().min(1).max(12).optional(),
 });
 
 export type Scenario = z.infer<typeof ScenarioSchema>;
@@ -45,10 +47,12 @@ export interface SimulationResult {
   breakdown: TierResult[];
   tou?: TouPeriodResult[];
   savings?: SavingsSuggestion;
+  recommendations?: string[];
 }
 
 /** 账单核对输入（真实电费账单） */
 export const BillInputSchema = z.object({
+  period: z.string().regex(/^\d{4}-\d{2}$/, '账期格式应为 YYYY-MM').optional(),
   total_kwh: z.coerce.number().positive('电量必须大于 0'),
   total_cost: z.coerce.number().min(0, '金额不能为负'),
   // 分时明细：三项同时提供才用于反推画像

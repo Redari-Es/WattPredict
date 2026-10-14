@@ -38,7 +38,8 @@ export async function simulateScenario(formData: FormData): Promise<SimulateActi
   }
 
   try {
-    const result = await simulate(parsed.data);
+    // 季节阶梯分档：缺省按当前月份
+    const result = await simulate({ ...parsed.data, month: parsed.data.month ?? new Date().getMonth() + 1 });
     return { ok: true, result };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : '瓦特引擎暂不可用' };
@@ -173,6 +174,8 @@ export async function reconcileBill(
   const hasTouDetail =
     peak_kwh != null && flat_kwh != null && valley_kwh != null &&
     peak_kwh + flat_kwh + valley_kwh > 0;
+  // 账期月份 → 季节阶梯分档
+  const month = parsed.data.period ? Number(parsed.data.period.split('-')[1]) : undefined;
 
   try {
     const result = await reconcile({
@@ -182,6 +185,7 @@ export async function reconcileBill(
       demand_kw: scenario.demand_kw,
       total_kwh: parsed.data.total_kwh,
       total_cost: parsed.data.total_cost,
+      month,
       ...(hasTouDetail ? { peak_kwh, flat_kwh, valley_kwh } : {}),
     });
     return { ok: true, result };

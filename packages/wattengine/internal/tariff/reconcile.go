@@ -46,6 +46,7 @@ func Reconcile(req *ReconcileRequest) (*ReconcileResponse, error) {
 		Province:       req.Province,
 		MeterType:      req.MeterType,
 		MonthlyKwh:     req.TotalKwh,
+		Month:          req.Month,
 		TransformerKva: req.TransformerKva,
 		DemandKw:       req.DemandKw,
 		HasTOU:         hasTouDetail,
@@ -97,7 +98,7 @@ func diagnose(req *ReconcileRequest, rule Rule, resp *ReconcileResponse, hasTouD
 		if req.MeterType == MeterIndustrial {
 			out = append(out, "工业账单通常还包含力调电费（功率因数奖惩）与代征基金，这两项暂未计入推演，是偏差的常见来源")
 		} else if len(rule.Tiers) > 0 {
-			out = append(out, "居民偏差常见来源：非夏季阶梯分档（200/400 度，MVP 暂用夏季档 260/600）、合租分摊或抄表周期跨月")
+			out = append(out, "居民偏差常见来源：合租分摊、抄表周期跨月，或账单月份的季节阶梯分档（5-10 月 260/600 度，其余 200/400 度）与推演不一致")
 		} else {
 			out = append(out, "偏差常见来源：代理购电价格每月浮动（规则文件为上月公告值）、代征基金及附加费")
 		}

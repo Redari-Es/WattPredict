@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Play, Loader2, AlertCircle, Lightbulb, TrendingDown, TrendingUp } from 'lucide-react';
+import { Play, Loader2, AlertCircle, Lightbulb, TrendingDown, TrendingUp, Sparkles } from 'lucide-react';
 import { simulateScenario, saveSimulationRunAction, type SimulateActionResult } from '@/app/actions';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { useDashboardStore } from '@/lib/store';
@@ -321,6 +321,30 @@ export function SimulateView() {
                   <span>{both.tou.savings.text}</span>
                 </div>
               )}
+
+              {/* 行动建议（瓦特引擎按电表类型生成） */}
+              {(() => {
+                const recs = [
+                  ...new Set([
+                    ...(both.flat.recommendations ?? []),
+                    ...(both.tou.recommendations ?? []),
+                  ]),
+                ];
+                return recs.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">行动建议</p>
+                    {recs.map((text, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-2.5 rounded-lg border border-primary/30 bg-primary/5 p-3.5 text-sm"
+                      >
+                        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        <span>{text}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
             </>
           ) : (
             <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">

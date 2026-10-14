@@ -36,6 +36,7 @@ export interface ReconcilePayload {
   demand_kw?: number;
   total_kwh: number;
   total_cost: number;
+  month?: number; // 账期月份，用于季节阶梯分档
   peak_kwh?: number;
   flat_kwh?: number;
   valley_kwh?: number;
