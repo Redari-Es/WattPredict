@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "bash scripts/dev.sh",
     "dev:web": "bun --cwd apps/web run dev",
+    "dev:mobile": "bun --cwd apps/mobile run start",
     "dev:engine": "go run ./packages/wattengine/cmd/server",
     "test:engine": "go test ./packages/wattengine/...",
     "typecheck": "bun --cwd apps/web run typecheck",
