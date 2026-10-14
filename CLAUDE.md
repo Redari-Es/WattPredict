@@ -219,58 +219,41 @@ wattpredict/
 │   │   │   └── engine.ts           # Go 引擎调用
 │   │   └── package.json
 │   │
-│   └── mobile/                     # React Native + Expo (Phase 2)
-│       ├── app/
-│       ├── src/
+│   └── mobile/                     # React Native + Expo SDK 57（v1 已实现，本机内存未接 Auth）
+│       ├── app/(tabs)/             # 概览 index / 推演 simulate / 电器 appliances / 账单 bills
+│       ├── src/                    # theme / engine / store / presets / types / format / ui
 │       └── package.json
 │
 ├── packages/
-│   ├── shared/                     # 共享代码
-│   │   ├── src/
-│   │   │   ├── types/
-│   │   │   │   ├── index.ts
-│   │   │   │   ├── scenario.ts
-│   │   │   │   ├── appliance.ts
-│   │   │   │   └── simulation.ts
-│   │   │   ├── constants/
-│   │   │   │   └── provinces.ts
-│   │   │   └── utils/
-│   │   │       └── formatters.ts
-│   │   └── package.json
+│   ├── shared/                     # 共享代码（未启用，类型暂在各端 lib/src 同步维护）
+│   ├── ui/                         # 跨平台 UI 组件（未启用）
 │   │
-│   ├── ui/                         # 跨平台 UI 组件
-│   │   ├── src/
-│   │   └── package.json
-│   │
-│   └── wattengine/                 # Go 推演引擎
+│   └── wattengine/                 # Go 推演引擎（端口 8088）
 │       ├── cmd/
 │       │   └── server/
 │       │       └── main.go
 │       ├── internal/
 │       │   ├── tariff/
-│       │   │   ├── engine.go
+│       │   │   ├── engine.go       # 阶梯（含季节分档）/ 分时 / 两部制 + 行动建议
+│       │   │   ├── reconcile.go    # 账单核对：反推画像 + 偏差诊断
 │       │   │   ├── types.go
-│       │   │   └── rules/
-│       │   │       ├── GD_residential.json
-│       │   │       ├── GD_commercial.json
-│       │   │       ├── GD_industrial.json
-│       │   │       ├── SH_residential.json (Phase 2)
-│       │   │       └── ZJ_residential.json (Phase 2)
-│       │   ├── simulation/
-│       │   │   └── engine.go
-│       │   ├── appliance/
-│       │   │   └── presets.go
+│       │   │   └── rules/          # GD_residential / GD_commercial / GD_industrial（2025 核价）
 │       │   └── handler/
-│       │       └── api.go
-│       ├── go.mod
-│       └── Dockerfile
+│       │       └── api.go          # POST /api/simulate · POST /api/reconcile · GET /healthz
+│       └── go.mod
+│
+├── supabase/
+│   └── migrations/                 # scenarios / appliances / simulation_runs / bills（RLS 完整）
 │
 ├── docs/
-│   ├── mvp-v0.1.md
-│   ├── claude.md
+│   ├── 瓦特预言_WattPredict_项目文档_v0.2.md
+│   ├── WattPredict_项目介绍.pptx
+│   ├── logo_wattpredict_v3.png
 │   └── ui-spec.md
 │
-├── turbo.json                      # Turborepo 配置
+├── scripts/
+│   ├── dev.sh                      # 一键同启引擎 + Web
+│   └── db.sh                       # 读 .env.local 的 DATABASE_URL 执行 psql/迁移
 └── package.json
 ```
 
@@ -366,7 +349,7 @@ create policy "appliances_self" on appliances
 
 ### 6.1 新功能开发 checklist
 
-- [ ] 更新共享类型 (`packages/shared/src/types/`)
+- [ ] 更新类型定义（`apps/web/lib/types.ts`；移动端 `apps/mobile/src/types.ts` 同步）
 - [ ] 更新数据库 schema（如有变更）
 - [ ] 实现 Go 引擎逻辑（如需要）
 - [ ] 实现 Server Action
